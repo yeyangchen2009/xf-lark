@@ -1,8 +1,17 @@
 'use strict';
 
 const { parseArgs } = require('node:util');
+const path = require('node:path');
 const { UsageError, DownloadError } = require('./errors');
-const { resolveProfileName, resolveProfileDir, resolveStoragePath, resolveOutputDir, resolveEdge } = require('./config');
+const {
+  dataHome,
+  tempRoot,
+  resolveProfileName,
+  resolveProfileDir,
+  resolveStoragePath,
+  resolveOutputDir,
+  resolveEdge,
+} = require('./config');
 const { publicError } = require('./utils/redact');
 
 const HELP = `xf-lark：aipoju/飞书云文档 Markdown 下载器（主用简称 xfl）
@@ -19,7 +28,7 @@ const HELP = `xf-lark：aipoju/飞书云文档 Markdown 下载器（主用简称
   --profile 名称      登录 profile 名称，默认 default
   --storage 文件      登录态文件（兼容 Playwright storageState 与历史 Python 格式）
   --output-dir 目录   下载根目录，默认当前工作目录下 downloads
-  --timeout 秒        单篇下载等待秒数，默认 300
+  --timeout 秒        单篇下载等待与落盘的超时秒数，默认 300
   --edge 路径         本机 Edge 可执行文件，默认使用系统安装的 Edge
 
 有头浏览器是硬约束：运行时会弹出 Edge 窗口，不支持 headless。
@@ -69,8 +78,73 @@ function nonNegative(value, name, defaultValue) {
 async function dispatch(command, positionals, values, signal) {
   const options = commandOptions(values);
   options.signal = signal;
-  // PR3/PR4 逐个接通真实实现
-  throw new DownloadError(`${command} 命令将在后续版本提供`);
+  options.offset = nonNegative(values.offset, '--offset', 0);
+  options.limit = values.limit === undefined ? null : nonNegative(values.limit, '--limit');
+  options.tempRoot = tempRoot();
+
+  if (command === 'doctor') {
+    const { runDoctor } = require('./doctor');
+    const report = await runDoctor({
+      edge: options.edge,
+      dataHomeDir: dataHome(),
+      outputDir: options.outputDir,
+      storagePath: options.storagePath,
+      tempRootDir: options.tempRoot,
+      signal,
+    });
+    for (const check of report.checks) {
+      process.stdout.write(`${check.ok ? '✔' : '✘'} ${check.name}: ${check.detail}\n`);
+    }
+    for (const warning of report.warnings) {
+      process.stdout.write(`! ${warning.detail}\n`);
+    }
+    return report.ok ? 0 : 1;
+  }
+
+  if (command === 'login') {
+    if (positionals.length !== 1) throw new UsageError('login 需要一个 aipoju 链接作为参数');
+    let loginUrl;
+    try {
+      loginUrl = new URL(positionals[0]);
+    } catch {
+      throw new UsageError('login 参数不是合法 URL');
+    }
+    if (loginUrl.protocol !== 'https:' && loginUrl.protocol !== 'http:') {
+      throw new UsageError('login 仅接受 http(s) 链接');
+    }
+    if (!loginUrl.hostname.endsWith('aipoju.com')) {
+      throw new UsageError('login 仅接受 aipoju.com 链接');
+    }
+    const { login } = require('./browser/session');
+    const summary = await login({
+      edge: options.edge,
+      profileDir: options.profileDir,
+      storagePath: options.storagePath,
+      signal,
+    });
+    process.stdout.write(
+      `登录态已保存: ${options.storagePath}（cookie ${summary.cookieCount} 个，localStorage 键 ${summary.storageKeys.length} 个）\n`,
+    );
+    return 0;
+  }
+
+  if (command === 'get') {
+    const { runGet } = require('./jobs');
+    const summary = await runGet(positionals, options);
+    process.stdout.write(
+      `\n完成 ${summary.succeeded}/${summary.total}，失败 ${summary.failed.length}，报告: ${path.join(options.outputDir, 'xf-lark-report.md')}\n`,
+    );
+    return summary.failed.length ? 1 : 0;
+  }
+
+  // batch
+  if (positionals.length !== 1) throw new UsageError('batch 需要一个清单文件路径（.json 或 .md）');
+  const { runBatch } = require('./jobs');
+  const summary = await runBatch(positionals[0], options);
+  process.stdout.write(
+    `\n完成 ${summary.succeeded}/${summary.total}，失败 ${summary.failed.length}，报告: ${path.join(options.outputDir, 'xf-lark-report.md')}\n`,
+  );
+  return summary.failed.length ? 1 : 0;
 }
 
 async function main(argv) {

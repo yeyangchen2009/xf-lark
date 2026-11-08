@@ -119,6 +119,16 @@ test('planDirect 首名直取，冲突走 campId 改名并登记 reserved', () =
   assert.ok(second.target.endsWith(path.join('direct', '直传手册_campabcd.zip')));
 });
 
+test('planDirect 支持 month 子目录与 -o 自定义词干', () => {
+  const outputDir = path.join(os.tmpdir(), 'xfl-fn-stem');
+  const planned = planDirect({
+    outputDir, month: '2026-09', suggestedName: '浏览器给的名字.md',
+    campId: 'camp12345678', stemOverride: '我的命名',
+    existsFn: () => false, reserved: new Set(),
+  });
+  assert.ok(planned.target.endsWith(path.join('202609', '我的命名.md')));
+});
+
 test('joinTarget 归一扩展名并拦截目录逃逸', () => {
   const outputDir = path.join(os.tmpdir(), 'xfl-fn-join');
   const directory = path.resolve(outputDir, '202609');
