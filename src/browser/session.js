@@ -16,6 +16,11 @@ const NAV_TIMEOUT_MS = 30_000;
 const SW_WAIT_MS = 15_000;
 // 坑⑥：收尾关浏览器也要有界，CDP 僵死时不能让 finally 把整个进程挂住
 const CLOSE_TIMEOUT_MS = 10_000;
+// 临时 profile 目录前缀，mkdtemp 与启动清扫共用，保证两者识别的是同一批目录
+const PROFILE_PREFIX = 'xfl-profile-';
+// 残留 profile 的陈旧阈值：单次运行即使 --timeout 900 也只 15 分钟，1 小时足够安全。
+// 正在运行的 profile 因 Edge 持续写入而 mtime 很新，不会被启动清扫误删
+const STALE_PROFILE_MS = 60 * 60 * 1000;
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -64,6 +69,46 @@ async function launchContext({ persistentDir, withExtension, edge, downloadsDir,
   return context;
 }
 
+// 列出 root 下 mtime 超过 staleMs 的同前缀残留 profile 目录。纯读、可注入时钟便于单测。
+// Windows 真实 Ctrl+C 是进程组强杀，上次运行的 profile 可能来不及在 finally 里删除；
+// 只认 PROFILE_PREFIX 目录、按陈旧度过滤，绝不触碰前缀之外的文件，也不误删正在运行的新 profile。
+async function listStaleProfiles(root, {
+  now = Date.now(),
+  staleMs = STALE_PROFILE_MS,
+  prefix = PROFILE_PREFIX,
+} = {}) {
+  let entries;
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  }
+  const stale = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith(prefix)) continue;
+    const full = path.join(root, entry.name);
+    const stat = await fs.stat(full).catch(() => null);
+    if (stat && now - stat.mtimeMs >= staleMs) stale.push(full);
+  }
+  return stale;
+}
+
+// 串行删除陈旧残留，单个失败（占用/权限）跳过不阻断主任务，返回实际删除的路径
+async function cleanupStaleProfiles(root, options = {}) {
+  const stale = await listStaleProfiles(root, options);
+  const removed = [];
+  for (const dir of stale) {
+    try {
+      await fs.rm(dir, { recursive: true, force: true });
+      removed.push(dir);
+    } catch {
+      // 删不掉留给下次运行再试
+    }
+  }
+  return removed;
+}
+
 // 新鲜临时 profile 是两条硬约束的共同前提：
 //   ① background.js 73-78 行要求窗口恰好 1 个活动标签页才注入转换脚本；
 //   ② 扩展默认 legacyFileSave 下载方式，用户若在老 profile 改过 ShowSaveFilePicker，
@@ -71,7 +116,9 @@ async function launchContext({ persistentDir, withExtension, edge, downloadsDir,
 async function withTempProfile(run, options = {}) {
   const root = options.tempRoot || tempRoot();
   await fs.mkdir(root, { recursive: true });
-  const profileDir = await fs.mkdtemp(path.join(root, 'xfl-profile-'));
+  // 启动清扫上次强杀残留的陈旧 profile（见 listStaleProfiles），失败不阻断本次运行
+  await cleanupStaleProfiles(root).catch(() => {});
+  const profileDir = await fs.mkdtemp(path.join(root, PROFILE_PREFIX));
   let context;
   try {
     context = await launchContext({
@@ -137,9 +184,13 @@ module.exports = {
   NAV_TIMEOUT_MS,
   SW_WAIT_MS,
   CLOSE_TIMEOUT_MS,
+  PROFILE_PREFIX,
+  STALE_PROFILE_MS,
   sleep,
   waitForServiceWorker,
   launchContext,
+  listStaleProfiles,
+  cleanupStaleProfiles,
   withTempProfile,
   waitForEnter,
   login,
