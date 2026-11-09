@@ -1,0 +1,37 @@
+{
+  "name": "xf-lark",
+  "version": "0.1.0",
+  "description": "Download authorized aipoju/Feishu docs as Markdown ZIP via a bundled browser extension",
+  "author": "yeyangchen2009",
+  "license": "MIT",
+  "private": false,
+  "type": "commonjs",
+  "bin": {
+    "xf-lark": "./bin/xf-lark.js",
+    "xfl": "./bin/xf-lark.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:edge": "node --test test/edge.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "playwright-core": "^1.65.0"
+  },
+  "keywords": [
+    "feishu",
+    "lark",
+    "aipoju",
+    "markdown",
+    "docx",
+    "download",
+    "cli"
+  ]
+}
