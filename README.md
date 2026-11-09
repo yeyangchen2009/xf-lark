@@ -64,9 +64,14 @@ JSON 清单走严格白名单，仅接受 `url/name/month` 三个字段，未知
 ```json
 [
   { "url": "https://aipoju.com/docx/c1/t1" },
-  { "url": "https://aipoju.com/docx/c2/t2", "name": "直传文档", "month": "202610" }
+  { "url": "https://aipoju.com/docx/c2/t2", "name": "手册二", "month": "202610" }
 ]
 ```
+
+`name` 字段决定条目语义：
+
+- 不带 `name`：直传语义，文件名跟随浏览器下载建议，落 `downloads/direct/`，同名碰撞按 `<词干>_<行动营ID前8>` 改名。
+- 带 `name`：与 Markdown 清单条目同语义，按名称命名并参与同名 SKIP；给了 `month` 落月份目录，缺省落 `downloads/direct/`。
 
 任务串行执行，单项失败会计入报告并使退出码为 1，不影响后续条目。
 
@@ -74,13 +79,13 @@ JSON 清单走严格白名单，仅接受 `url/name/month` 三个字段，未知
 
 | 通路 | 状态 |
 | --- | --- |
-| 纯函数层（命名、登录态归一、清单解析、产物校验、脱敏） | 47 项自动化单测全绿，无需浏览器 |
+| 纯函数层（命名、登录态归一、清单解析、产物校验、脱敏） | 57 项自动化单测全绿，无需浏览器（另 3 项 Edge 门禁在无浏览器环境自动跳过） |
 | 有头 Edge 扩展加载 | `test:edge` 实测通过：临时 profile 启动并确认扩展 service worker 注册 |
 | 按钮轮询、下载竞速、saveAs、产物校验全链路 | 本地 127.0.0.1 仿造页面实测通过，自动化永不访问真实 aipoju |
 | storageState 往返 | 本地服务种 cookie 与 localStorage 实测通过，兼容仅 localStorage 的 Python 老格式 |
-| 真实文档端到端 | 待手动验收，清单见 [docs/manual-acceptance.md](./docs/manual-acceptance.md) |
+| 真实文档端到端 | 已手动验收通过：3 份真实大文档与 Python 版 ZIP 条目级等价（字节差仅时间戳等元数据），重跑 SKIP、直传碰撞改名、无权限失败零残留、超时兜底、双 bin 全局安装均实测，清单见 [docs/manual-acceptance.md](./docs/manual-acceptance.md) |
 
-未完成真实端到端验收不代表不可用，但不把它表述成“已完整支持”。
+Windows 控制台的真实 Ctrl+C 可能在 node 异步收尾完成前回收进程，临时目录或残留一个空的 profile 目录（唯一名、无害，`.tmp` 原子写入保证不会留下半成品产物）；中断退出码 130 与「被中断」报告在进程内信号路径由自动化测试覆盖。
 
 ## 文件与隐私
 
