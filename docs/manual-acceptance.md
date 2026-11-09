@@ -3,7 +3,7 @@
 自动化测试覆盖纯逻辑与本地仿造链路，本清单覆盖必须接触真实 aipoju 的部分。
 在干净目录执行，避免历史产物干扰 SKIP 判断；每项通过后勾选并记录实测结果。
 
-**验收终态（2026-11-09）**：1–4、6–9、11 共 10 项实测通过；第 5 项无真实样本标 N/A（自动化覆盖）；第 10 项中断逻辑通过、真实控制台 Ctrl+C 存在 Windows 平台限制，见该项注记。详细记录与字节比对见验收工作目录 `results.md`。
+**验收终态（2026-11-09）**：1–4、6–9、11 共 10 项实测通过；第 5 项无真实样本标 N/A（自动化覆盖）；第 10 项中断逻辑通过、真实控制台 Ctrl+C 存在 Windows 平台限制（见该项注记），其暴露的临时 profile 残留已在 0.1.0 用启动清扫根治。详细记录与字节比对见验收工作目录 `results.md`。
 
 ## 环境与登录
 
@@ -24,5 +24,5 @@
 
 - [x] **10. Ctrl+C（逻辑通过；真实控制台有 Windows 平台限制）**：
   - 中断逻辑（通过）：图片密集文档下载途中触发中断，AbortController 贯通到下载取消，`.tmp-*` 原子清理无半成品；退出码 130 由 `cli.test.js` 进程内 `process.emit('SIGINT')` 断言，报告标注「被中断（SIGINT）」由 `jobs.test.js` 断言。
-  - 真实控制台实测（平台限制）：在 cmd 批处理容器与 PowerShell 直接跑 node 两种方式下按 Ctrl+C，均观察到 `FAIL: 下载已取消`、`.tmp` 零残留、Edge 进程清零、无半成品；但 Windows 的 CTRL_C_EVENT 广播到整个控制台进程组（含 playwright 拉起的 Edge 子进程），控制台宿主在 node 跑完异步深度收尾（写报告、finally 删 profile）前回收进程，故实测报告未写、TEMP 残留一个空的 `xfl-profile-*` 目录（唯一名、不含产物、无害，已手动清理）。这是 Node on Windows + 有头浏览器子进程的平台限制，非产品逻辑缺陷；进程内 SIGINT 不走控制台机制，故自动化能完整验证 130 与报告。数据安全不受影响：原子 `.tmp` 设计经受住真实强杀，正式产物要么完整要么不存在。对症根治（启动时清扫 TEMP 残留 profile，不依赖信号时机）列入 0.1.1 候选。
+  - 真实控制台实测（平台限制）：在 cmd 批处理容器与 PowerShell 直接跑 node 两种方式下按 Ctrl+C，均观察到 `FAIL: 下载已取消`、`.tmp` 零残留、Edge 进程清零、无半成品；但 Windows 的 CTRL_C_EVENT 广播到整个控制台进程组（含 playwright 拉起的 Edge 子进程），控制台宿主在 node 跑完异步深度收尾（写报告、finally 删 profile）前回收进程，故实测报告未写、TEMP 残留一个空的 `xfl-profile-*` 目录（唯一名、不含产物、无害，已手动清理）。这是 Node on Windows + 有头浏览器子进程的平台限制，非产品逻辑缺陷；进程内 SIGINT 不走控制台机制，故自动化能完整验证 130 与报告。数据安全不受影响：原子 `.tmp` 设计经受住真实强杀，正式产物要么完整要么不存在。**残留 profile 的根治已在 0.1.0 落地**：新增启动清扫（`session.js` 的 `cleanupStaleProfiles`），每次创建新临时 profile 前删除临时目录下同前缀、mtime 超 1 小时的残留目录，正在运行的新 profile（mtime 新）与前缀之外的文件一律不触碰，清扫失败不阻断主任务；由 4 项纯逻辑单测覆盖，并用真实 `doctor` 端到端实测：2 小时陈旧 profile 被精准删除、新 profile 与无关目录保留、退出码 0。强杀下中断报告仍来不及写（平台限制无法在信号路径绕过），但控制台已有逐条 OK/FAIL 实时输出兜底。
 - [x] **11. pack 与双 bin**：`npm pack --dry-run` 清单含 27 个扩展 dist 文件且不含 test/、storage/、profiles/；`npm link`（或全局安装）后 `xfl --version` 与 `xf-lark --version` 都输出 0.1.0。实测：Program Files 全局 prefix 下 npm link 触发 EPERM，改用 F 盘临时 `--prefix` 真装 tgz，`xfl`/`xf-lark` 的 sh/cmd/ps1 三套 shim 的 `--version` 均为 0.1.0，全局包 doctor 全绿；dry-run 共 45 文件、无测试与数据文件。
