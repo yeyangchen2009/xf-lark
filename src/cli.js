@@ -14,11 +14,11 @@ const {
 } = require('./config');
 const { publicError } = require('./utils/redact');
 
-const HELP = `xf-lark：aipoju/飞书云文档 Markdown 下载器（主用简称 xfl）
+const HELP = `xf-lark：飞书云文档 Markdown 下载器（主用简称 xfl）
 
 用法：
   xfl doctor [--output-dir 目录] [--edge 路径]
-  xfl login <aipoju 链接> [--profile 名称] [--storage 文件] [--edge 路径]
+  xfl login <飞书文档链接> [--profile 名称] [--storage 文件] [--edge 路径]
   xfl get <docx 链接...> [--month YYYYMM] [-o 词干] [--output-dir 目录]
         [--timeout 秒] [--storage 文件] [--edge 路径]
   xfl batch <manifest.json|links.md> [--month YYYYMM] [--offset N] [--limit N]
@@ -102,7 +102,7 @@ async function dispatch(command, positionals, values, signal) {
   }
 
   if (command === 'login') {
-    if (positionals.length !== 1) throw new UsageError('login 需要一个 aipoju 链接作为参数');
+    if (positionals.length !== 1) throw new UsageError('login 需要一个飞书文档链接作为参数');
     let loginUrl;
     try {
       loginUrl = new URL(positionals[0]);
@@ -113,7 +113,7 @@ async function dispatch(command, positionals, values, signal) {
       throw new UsageError('login 仅接受 http(s) 链接');
     }
     if (!loginUrl.hostname.endsWith('aipoju.com')) {
-      throw new UsageError('login 仅接受 aipoju.com 链接');
+      throw new UsageError('login 仅接受飞书文档链接');
     }
     const { login } = require('./browser/session');
     const summary = await login({
