@@ -13,7 +13,7 @@ const JSON_ALLOWED_KEYS = new Set(['url', 'name', 'month']);
 function parseDocxUrl(value) {
   const raw = String(value ?? '').trim();
   const match = DOCX_URL_RE.exec(raw);
-  if (!match) throw new UsageError(`不是合法的 aipoju docx 链接: ${raw}`);
+  if (!match) throw new UsageError(`不是合法的飞书文档链接: ${raw}`);
   return { campId: match[1], token: match[2], url: raw };
 }
 

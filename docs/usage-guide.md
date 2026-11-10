@@ -1,6 +1,6 @@
 # xf-lark 使用指南
 
-把 aipoju 上的飞书文档下载成 Markdown（图片多的自动打包成 zip）。命令简写 **`xfl`**。
+把飞书云文档下载成 Markdown（图片多的自动打包成 zip）。命令简写 **`xfl`**。
 
 前提：Windows、Node.js 22+、本机 Edge。只能下载**你本人有权限**的文档。
 
@@ -10,9 +10,9 @@
 # 1. 安装
 npm install -g xf-lark
 
-# 2. 登录（链接换成任意一个你能打开的 aipoju 文档链接）
+# 2. 登录（换成任意一个你能打开的飞书文档链接）
 #    弹出 Edge 后手动登录，回到终端按 Enter
-xfl login "https://aipoju.com/docx/xxxx/yyyy"
+xfl login "<飞书文档链接>"
 
 # 3. 下载
 xfl get "文档链接"
@@ -35,7 +35,7 @@ xfl batch 清单.md             # 按清单批量下载
 ## 202609破局行动
 
 ### 手册名-1
-- 行动手册: https://aipoju.com/docx/camp/token
+- 行动手册: <飞书文档链接>
 ```
 
 ## 两个省心点

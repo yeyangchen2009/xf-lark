@@ -1,7 +1,7 @@
 {
   "name": "xf-lark",
-  "version": "0.1.0",
-  "description": "Download authorized aipoju/Feishu docs as Markdown ZIP via a bundled browser extension",
+  "version": "0.1.1",
+  "description": "Download authorized Feishu/Lark cloud docs as Markdown ZIP via a bundled browser extension",
   "author": "yeyangchen2009",
   "license": "MIT",
   "private": false,
@@ -28,7 +28,6 @@
   "keywords": [
     "feishu",
     "lark",
-    "aipoju",
     "markdown",
     "docx",
     "download",

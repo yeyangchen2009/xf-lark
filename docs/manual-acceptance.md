@@ -1,6 +1,6 @@
 # 0.1.0 手动验收清单（11 项）
 
-自动化测试覆盖纯逻辑与本地仿造链路，本清单覆盖必须接触真实 aipoju 的部分。
+自动化测试覆盖纯逻辑与本地仿造链路，本清单覆盖必须接触真实飞书文档的部分。
 在干净目录执行，避免历史产物干扰 SKIP 判断；每项通过后勾选并记录实测结果。
 
 **验收终态（2026-11-09）**：1–4、6–9、11 共 10 项实测通过；第 5 项无真实样本标 N/A（自动化覆盖）；第 10 项中断逻辑通过、真实控制台 Ctrl+C 存在 Windows 平台限制（见该项注记），其暴露的临时 profile 残留已在 0.1.0 用启动清扫根治。详细记录与字节比对见验收工作目录 `results.md`。
@@ -8,8 +8,8 @@
 ## 环境与登录
 
 - [x] **1. doctor 全绿**：无登录态时 `xfl doctor` 五项硬检查全部通过，登录态软提示报告「未发现可用登录态」，退出码 0。实测：登录后软提示正确报告 cookie/localStorage 计数与最早过期日；全局安装包复跑同样全绿（包内扩展 27 文件、service worker 注册可达）。
-- [x] **2. login 落盘**：`xfl login "https://aipoju.com/docx/<camp>/<token>"`，在弹出的 Edge 中手动登录后回终端按 Enter；`~/.xf-lark/storage/default.json` 生成，文件权限为 0600，内容为 Playwright 原生 `{cookies, origins}` 结构。实测：NTFS 下 mode 位显示 0666 为 Node on Windows 已知语义，ACL 实测仅 SYSTEM/Administrators/当前用户可访问，等效 0600；origin 归一为 aipoju.com。
-- [x] **3. legacy 登录态兼容**：把 Python 版仅含 localStorage 的 `aipoju_storage.json` 经 `--storage` 传入一次 get，能正常进入登录流程不报「不含任何 cookie 或 localStorage」。实测：cookie 0 个、localStorage 5 键的仅-localStorage 形态被正确归一，软提示「登录态可用」，退出码 0。
+- [x] **2. login 落盘**：`xfl login "<飞书文档链接>"`，在弹出的 Edge 中手动登录后回终端按 Enter；`~/.xf-lark/storage/default.json` 生成，文件权限为 0600，内容为 Playwright 原生 `{cookies, origins}` 结构。实测：NTFS 下 mode 位显示 0666 为 Node on Windows 已知语义，ACL 实测仅 SYSTEM/Administrators/当前用户可访问，等效 0600；origin 归一到文档站点。
+- [x] **3. legacy 登录态兼容**：把 Python 版仅含 localStorage 的旧登录态 JSON 文件经 `--storage` 传入一次 get，能正常进入登录流程不报「不含任何 cookie 或 localStorage」。实测：cookie 0 个、localStorage 5 键的仅-localStorage 形态被正确归一，软提示「登录态可用」，退出码 0。
 
 ## 真实文档下载
 
